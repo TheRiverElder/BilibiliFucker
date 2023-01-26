@@ -1,13 +1,25 @@
 package top.riverelder.android.bilibilifucker;
 
 import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
+import static de.robv.android.xposed.XposedHelpers.findAndHookConstructor;
 import static de.robv.android.xposed.XC_MethodReplacement.DO_NOTHING;
 
+import org.jetbrains.annotations.Nullable;
+
+import java.lang.reflect.Array;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
+import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
 
@@ -43,14 +55,132 @@ public class BilibiliFucker implements IXposedHookLoadPackage {
 
         // 解除评论区关键字蓝字
         try {
-//            findAndHookMethod("tv.danmaku.biliplayerimpl.gesture.GestureService", lpparam.classLoader, "f6", DO_NOTHING);
+            findAndHookMethod(
+                    "com.bilibili.app.comm.comment2.model.rpc.CommentRpcKt",
+                    lpparam.classLoader,
+                    "p",
+                    "com.bapis.bilibili.main.community.reply.v1.ReplyInfo",
+                    new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+//                            log("comment result = " + param.getResult());
+                        }
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                            Object comment = param.getResult();
+//                            log("Someone is getting BiliComment with fields: ");
+//                            printBean(comment);
+                            try {
+                                setDescendantField(comment, new String[]{ "mContent", "jumpUrls" }, null);
+                                param.setResult(comment);
+                            } catch (Exception ignored) { }
+
+//                            log("Someone is constructing BiliComment with fields: ");
+//                            printFields(param.thisObject);
+//                            log("Someone received BiliCommentDetail: ");
+//                            log("comment result = " + param.getResult());
+                        }
+                    });
             log("Hook succeeded: Preventing Function: KeyWorkLink");
         } catch (Exception e) {
             log("Hook failed: Preventing Function: KeyWorkLink");
             log("message: " + e.getMessage());
         }
 
-        XposedBridge.log("Hook finished: " + packageName);
+        log("Hook finished: " + packageName);
+    }
+
+    public static void printBean(Object object) {
+        printBean(object, 1, new HashSet<>());
+    }
+
+    public static void printBean(Object object, int indentLevel, Set<Object> visited) {
+        if (object == null) return;
+
+        String indent = repeatString("|---", indentLevel);
+        Class<?> clazz = object.getClass();
+
+        if (!isLiteral(clazz)) {
+            visited.add(object);
+        }
+
+        if (clazz.isArray()) {
+            int length = Array.getLength(object);
+            for (int i = 0; i < length; i++) {
+                printBeanLine(indent, "[" + i + "]", Array.get(object, i), indentLevel, visited);
+            }
+        } if (object instanceof Collection) {
+            Collection<?> collection = (Collection<?>) object;
+            int i = 0;
+            for (Object value : collection) {
+                printBeanLine(indent, "[" + i + "]", value, indentLevel, visited);
+                i++;
+            }
+        } if (object instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) object;
+            Set<? extends Map.Entry<?, ?>> entries = map.entrySet();
+            for (Map.Entry<?, ?> entry : entries) {
+                printBeanLine(indent, "[" + entry.getKey() + "]", entry.getValue(), indentLevel, visited);
+            }
+        } else {
+            for (Field field : clazz.getDeclaredFields()) {
+                if (Modifier.isStatic(field.getModifiers())) continue;
+
+                field.setAccessible(true);
+                try {
+                    printBeanLine(indent, field.getName(), field.get(object), indentLevel, visited);
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    public static void printBeanLine(String indent, String name, @Nullable Object value, int indentLevel, Set<Object> visited) {
+        String valueString = (value instanceof String && ((String) value).matches("^\\s*$")) ? "\"\"" : String.valueOf(value);
+        if (value == null || isLiteral(value.getClass())) {
+            log(indent + name + ": " + valueString);
+        } else {
+            if (visited.contains(value)) {
+                log(indent + name + ": " + valueString + " (loop reference)");
+            } else {
+                log(indent + name + ": " + valueString);
+                printBean(value, indentLevel + 1, visited);
+            }
+        }
+    }
+
+    public static boolean isLiteral(Class<?> clazz) {
+        return clazz.isPrimitive() || clazz == String.class;
+    }
+
+    public static String repeatString(String string, int amount) {
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < amount; i++) {
+            builder.append(string);
+        }
+        return builder.toString();
+    }
+
+    public static void printStackTrace() {
+        for (StackTraceElement stackTraceElement : new Throwable().getStackTrace()) {
+            log(stackTraceElement.getClassName() + "#" + stackTraceElement.getMethodName());
+        }
+    }
+
+    public static void setDescendantField(Object object, String[] path, @Nullable Object value) throws Exception {
+        Object currentObject = object;
+        Field field = null;
+        for (int i = 0; i < path.length; i++) {
+            String fieldName = path[i];
+            Class<?> clazz = Objects.requireNonNull(currentObject).getClass();
+            field = clazz.getDeclaredField(fieldName);
+            Objects.requireNonNull(field).setAccessible(true);
+            if (i < path.length - 1) {
+                currentObject = field.get(currentObject);
+            }
+        }
+        Objects.requireNonNull(field).set(currentObject, value);
     }
 
 }
