@@ -4,6 +4,8 @@ import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
 import static de.robv.android.xposed.XposedHelpers.findAndHookConstructor;
 import static de.robv.android.xposed.XC_MethodReplacement.DO_NOTHING;
 
+import android.view.View;
+
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Array;
@@ -19,6 +21,7 @@ import java.util.Set;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XC_MethodReplacement;
 import de.robv.android.xposed.XC_MethodHook.MethodHookParam;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
@@ -43,6 +46,10 @@ public class BilibiliFucker implements IXposedHookLoadPackage {
 
         log("Loaded app: " + packageName);
         log("Start hook: " + packageName);
+
+        // Debug用的view绑定
+//        hookViewClickEvent();
+
 
         // 解除长按快进
         try {
@@ -84,6 +91,25 @@ public class BilibiliFucker implements IXposedHookLoadPackage {
             log("Hook succeeded: Preventing Function: KeyWorkLink");
         } catch (Exception e) {
             log("Hook failed: Preventing Function: KeyWorkLink");
+            log("message: " + e.getMessage());
+        }
+
+        // 禁止在点击UP头像时转跳到直播间
+        try {
+//            "tv.danmaku.bili.videopage.common.widget.view.VerifyAvatarFrameLayout",
+            findAndHookMethod(
+                    "tv.danmaku.bili.videopage.data.view.model.OwnerExt",
+                    lpparam.classLoader,
+                    "hasLive",
+                    new XC_MethodReplacement() {
+                        @Override
+                        public Object replaceHookedMethod(MethodHookParam param) {
+                            return false;
+                        }
+                    });
+            log("Hook succeeded: Preventing Function: JumpToLiveRoomWhileClickingVideoPageAuthorAvatar");
+        } catch (Exception e) {
+            log("Hook failed: Preventing Function: JumpToLiveRoomWhileClickingVideoPageAuthorAvatar");
             log("message: " + e.getMessage());
         }
 
@@ -181,6 +207,34 @@ public class BilibiliFucker implements IXposedHookLoadPackage {
             }
         }
         Objects.requireNonNull(field).set(currentObject, value);
+    }
+
+    public static void hookViewClickEvent() {
+        try {
+            findAndHookMethod(
+                    View.class,
+                    "setOnClickListener",
+                    View.OnClickListener.class,
+                    new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                            View.OnClickListener l = (View.OnClickListener) param.args[0];
+                            param.args[0] = new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                    log("!!! on click view: " + v);
+                                    log("!-- listener: " + l);
+                                    printStackTrace();
+                                    l.onClick(v);
+                                }
+                            };
+                        }
+                    });
+            log("Hook succeeded: ViewDebug");
+        } catch (Exception e) {
+            log("Hook failed: ViewDebug");
+            log("message: " + e.getMessage());
+        }
     }
 
 }
