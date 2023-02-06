@@ -3,6 +3,12 @@ package top.riverelder.android.bilibilifucker;
 import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
 import static de.robv.android.xposed.XposedHelpers.findAndHookConstructor;
 import static de.robv.android.xposed.XC_MethodReplacement.DO_NOTHING;
+import static top.riverelder.android.bilibilifucker.Utils.log;
+import static top.riverelder.android.bilibilifucker.Utils.printBean;
+import static top.riverelder.android.bilibilifucker.Utils.printStackTrace;
+import static top.riverelder.android.bilibilifucker.Utils.setDescendantField;
+import static top.riverelder.android.bilibilifucker.Utils.tryGetDescendantField;
+import static top.riverelder.android.bilibilifucker.Utils.trySetDescendantField;
 
 import android.view.View;
 
@@ -13,12 +19,14 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XC_MethodReplacement;
@@ -28,16 +36,11 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
 
 public class BilibiliFucker implements IXposedHookLoadPackage {
 
-    public static final String LOG_HEADER = "BilibiliFucker: ";
 
     public static final Set<String> VALID_TARGET_PACKAGE_NAMES = new HashSet<>(Arrays.asList(
             "com.bilibili.app.in",
             "tv.danmaku.bili"
     ));
-
-    public static void log(String message) {
-        XposedBridge.log(LOG_HEADER + message);
-    }
 
     public void handleLoadPackage(final LoadPackageParam lpparam) throws Throwable {
         String packageName = lpparam.packageName;
@@ -47,9 +50,9 @@ public class BilibiliFucker implements IXposedHookLoadPackage {
         log("Loaded app: " + packageName);
         log("Start hook: " + packageName);
 
-        // Debug用的view绑定
-//        hookViewClickEvent();
+//        if (!lpparam.isFirstApplication) return;
 
+        ClassLoader classLoader = lpparam.classLoader;
 
         // 解除长按快进
         try {
@@ -107,106 +110,111 @@ public class BilibiliFucker implements IXposedHookLoadPackage {
                             return false;
                         }
                     });
-            log("Hook succeeded: Preventing Function: JumpToLiveRoomWhileClickingVideoPageAuthorAvatar");
+            log("Hook succeeded: Preventing Function: VideoPageAuthorAvatarToLiveRoom");
         } catch (Exception e) {
-            log("Hook failed: Preventing Function: JumpToLiveRoomWhileClickingVideoPageAuthorAvatar");
+            log("Hook failed: Preventing Function: VideoPageAuthorAvatarToLiveRoom");
+            log("message: " + e.getMessage());
+        }
+
+        // Debug用的view绑定
+//        hookViewClickEvent();
+//        hookViewScrollFreshEvent(lpparam);
+//        XposedHelpers.findAndHookMethod("com.bilibili.lib.homepage.startdust.secondary.BasePrimaryMultiPageFragment", classLoader, "kt", java.util.List.class, new XC_MethodHook() {
+//            @Override
+//            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+//                log("!!! ");
+//                printBean(param.args[0]);
+////                printStackTrace();
+//            }
+//        });
+//        XposedHelpers.findAndHookMethod("com.bilibili.pegasus.promo.index.f", classLoader, "onBindViewHolder", "androidx.recyclerview.widget.RecyclerView$b0", int.class, java.util.List.class, new XC_MethodHook() {
+//
+//            @Override
+//            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+////                if (!Integer.valueOf(10).equals(param.getResult())) return;
+//                log("!!! " + param.thisObject);
+//                printBean(param.thisObject, 1);
+//                printStackTrace();
+//            }
+//        });
+        // com.bilibili.pegasus.api.modelv2.SmallCoverV2Item
+//        XposedHelpers.findAndHookMethod("com.bilibili.pegasus.api.BaseTMApiParser", classLoader, "e", "com.alibaba.fastjson.JSONArray", new XC_MethodHook() {
+//            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+//                log("!!! " + param.thisObject);
+//                printBean(param.getResult());
+////                printStackTrace();
+//            }
+//        });
+//        XposedHelpers.findAndHookMethod("com.bilibili.pegasus.api.BaseTMApiParser", classLoader, "e", "com.alibaba.fastjson.JSONArray", new XC_MethodHook() {
+//
+//            @Override
+//            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+//                log("!!! " + ((List) param.getResult()).size());
+//                printStackTrace();
+//            }
+//        });
+        // com.bilibili.pegasus.api.b0
+        // com.bilibili.okretro.call.a.g
+//        XposedHelpers.findAndHookConstructor("com.bilibili.okretro.call.a", classLoader, "okhttp3.a0", java.lang.reflect.Type.class, java.lang.annotation.Annotation[].class, "okhttp3.y", "ha.a", new XC_MethodHook() {
+//            @Override
+//            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+//            }
+//            @Override
+//            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+//                log("!!! " + param.thisObject);
+//                printStackTrace();
+//            }
+//        });
+//        XposedHelpers.findAndHookMethod("com.bilibili.okretro.call.a", classLoader, "g", "retrofit2.r", new XC_MethodHook() {
+//            @Override
+//            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+//                Object r = param.args[0];
+////                log("艹艹艹艹艹艹艹艹");
+////                printBean(r);
+////                log("艹艹艹艹艹艹艹艹");
+//                Object rb = getDescendantField(r, "b");
+//                if (rb == null || !"com.bilibili.okretro.GeneralResponse".equals(rb.getClass().getName())) return;
+//                Object data = getDescendantField(rb, "data");
+//                if (data == null || !"com.bilibili.pegasus.api.modelv2.PegasusFeedResponse".equals(data.getClass().getName())) return;
+//                Object selfO = getDescendantField(param.thisObject, "o");
+//                log("========");
+//                log("!!! " + selfO);
+//                printBean(selfO);
+//                printStackTrace();
+//                log("========");
+//            }
+//        });
+        // com.bilibili.pegasus.promo.index.IndexFeedFragmentV2
+//        XposedHelpers.findAndHookMethod("com.bilibili.pegasus.promo.index.IndexFeedFragmentV2$mIndexCallback$1", classLoader, "onDataSuccess", "com.bilibili.pegasus.api.modelv2.PegasusFeedResponse", new XC_MethodHook() {
+//            @Override
+//            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+//                log("!!! " + param.thisObject);
+//                printBean(param.args[0]);
+//            }
+//        });
+        try {
+            XposedHelpers.findAndHookMethod("com.bilibili.pegasus.promo.index.IndexFeedFragmentV2", classLoader, "Ax", "com.bilibili.pegasus.api.modelv2.PegasusFeedResponse", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    log("!!! ");
+                    Utils.BufferedResult bufferedResult = tryGetDescendantField(param.args[0], "config");
+                    if (!bufferedResult.succeeded) return;
+                    Object config = bufferedResult.result;
+                    boolean autoRefreshTimeByActiveResult = trySetDescendantField(config, new String[] { "autoRefreshTimeByActive" }, 0L);
+                    boolean autoRefreshTimeByAppearResult = trySetDescendantField(config, new String[] { "autoRefreshTimeByAppear" }, 0L);
+    //                log("autoRefreshTimeByActiveResult = " + autoRefreshTimeByActiveResult);
+    //                log("autoRefreshTimeByAppearResult = " + autoRefreshTimeByAppearResult);
+    //                log("aaaaaaaa ");
+    //                printBean(config);
+                }
+            });
+            log("Hook succeeded: Preventing Function: AutoRefreshRecommendVideoList");
+        } catch (Exception e) {
+            log("Hook failed: Preventing Function: AutoRefreshRecommendVideoList");
             log("message: " + e.getMessage());
         }
 
         log("Hook finished: " + packageName);
-    }
-
-    public static void printBean(Object object) {
-        printBean(object, 1, new HashSet<>());
-    }
-
-    public static void printBean(Object object, int indentLevel, Set<Object> visited) {
-        if (object == null) return;
-
-        String indent = repeatString("|---", indentLevel);
-        Class<?> clazz = object.getClass();
-
-        if (!isLiteral(clazz)) {
-            visited.add(object);
-        }
-
-        if (clazz.isArray()) {
-            int length = Array.getLength(object);
-            for (int i = 0; i < length; i++) {
-                printBeanLine(indent, "[" + i + "]", Array.get(object, i), indentLevel, visited);
-            }
-        } if (object instanceof Collection) {
-            Collection<?> collection = (Collection<?>) object;
-            int i = 0;
-            for (Object value : collection) {
-                printBeanLine(indent, "[" + i + "]", value, indentLevel, visited);
-                i++;
-            }
-        } if (object instanceof Map) {
-            Map<?, ?> map = (Map<?, ?>) object;
-            Set<? extends Map.Entry<?, ?>> entries = map.entrySet();
-            for (Map.Entry<?, ?> entry : entries) {
-                printBeanLine(indent, "[" + entry.getKey() + "]", entry.getValue(), indentLevel, visited);
-            }
-        } else {
-            for (Field field : clazz.getDeclaredFields()) {
-                if (Modifier.isStatic(field.getModifiers())) continue;
-
-                field.setAccessible(true);
-                try {
-                    printBeanLine(indent, field.getName(), field.get(object), indentLevel, visited);
-                } catch (IllegalAccessException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
-
-    public static void printBeanLine(String indent, String name, @Nullable Object value, int indentLevel, Set<Object> visited) {
-        String valueString = (value instanceof String && ((String) value).matches("^\\s*$")) ? "\"\"" : String.valueOf(value);
-        if (value == null || isLiteral(value.getClass())) {
-            log(indent + name + ": " + valueString);
-        } else {
-            if (visited.contains(value)) {
-                log(indent + name + ": " + valueString + " (loop reference)");
-            } else {
-                log(indent + name + ": " + valueString);
-                printBean(value, indentLevel + 1, visited);
-            }
-        }
-    }
-
-    public static boolean isLiteral(Class<?> clazz) {
-        return clazz.isPrimitive() || clazz == String.class;
-    }
-
-    public static String repeatString(String string, int amount) {
-        StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < amount; i++) {
-            builder.append(string);
-        }
-        return builder.toString();
-    }
-
-    public static void printStackTrace() {
-        for (StackTraceElement stackTraceElement : new Throwable().getStackTrace()) {
-            log(stackTraceElement.getClassName() + "#" + stackTraceElement.getMethodName());
-        }
-    }
-
-    public static void setDescendantField(Object object, String[] path, @Nullable Object value) throws Exception {
-        Object currentObject = object;
-        Field field = null;
-        for (int i = 0; i < path.length; i++) {
-            String fieldName = path[i];
-            Class<?> clazz = Objects.requireNonNull(currentObject).getClass();
-            field = clazz.getDeclaredField(fieldName);
-            Objects.requireNonNull(field).setAccessible(true);
-            if (i < path.length - 1) {
-                currentObject = field.get(currentObject);
-            }
-        }
-        Objects.requireNonNull(field).set(currentObject, value);
     }
 
     public static void hookViewClickEvent() {
@@ -224,7 +232,7 @@ public class BilibiliFucker implements IXposedHookLoadPackage {
                                 public void onClick(View v) {
                                     log("!!! on click view: " + v);
                                     log("!-- listener: " + l);
-                                    printStackTrace();
+//                                    printStackTrace();
                                     l.onClick(v);
                                 }
                             };
@@ -235,6 +243,28 @@ public class BilibiliFucker implements IXposedHookLoadPackage {
             log("Hook failed: ViewDebug");
             log("message: " + e.getMessage());
         }
+    }
+
+    public static void hookViewScrollFreshEvent(final LoadPackageParam lpparam) {
+        try {
+            findAndHookConstructor(
+//            findAndHookMethod(
+                    "androidx.recyclerview.widget.RecyclerView.Adapter",
+                    lpparam.classLoader,
+                    new XC_MethodHook() {
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                            log("!!! RecyclerView.Adapter " + param.thisObject);
+                            printBean(param.thisObject);
+//                            printStackTrace();
+                        }
+                    });
+            log("Hook succeeded: ViewDebug");
+        } catch (Exception e) {
+            log("Hook failed: ViewDebug");
+            log("message: " + e.getMessage());
+        }
+
     }
 
 }
