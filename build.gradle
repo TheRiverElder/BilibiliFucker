@@ -3,6 +3,12 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+android.applicationVariants.all { variant ->
+    variant.outputs.all {
+        outputFileName = "BilibiliFucker-${variant.versionName}.apk"
+    }
+}
+
 android {
     compileSdk 32
 
@@ -15,7 +21,7 @@ android {
         minSdk 16
         targetSdk 32
         versionCode 1
-        versionName "1.0"
+        versionName "1.1.1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
