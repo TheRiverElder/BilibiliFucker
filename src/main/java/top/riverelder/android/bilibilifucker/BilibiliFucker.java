@@ -36,7 +36,6 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
 
 public class BilibiliFucker implements IXposedHookLoadPackage {
 
-
     public static final Set<String> VALID_TARGET_PACKAGE_NAMES = new HashSet<>(Arrays.asList(
             "com.bilibili.app.in",
             "tv.danmaku.bili"
@@ -221,7 +220,7 @@ public class BilibiliFucker implements IXposedHookLoadPackage {
             log("Hook Start: FixWatchLater");
 
             Class<?> FastJsonClass = classLoader.loadClass("com.alibaba.fastjson.JSON");
-            ;
+
             Class<?> OkHttpResponseClass = classLoader.loadClass("okhttp3.e0");
             Class<?> FeatureClass = classLoader.loadClass("com.alibaba.fastjson.parser.Feature");
             Class<?> WatchLaterListConverterClass = classLoader.loadClass("com.bilibili.okretro.converter.b");
@@ -233,7 +232,7 @@ public class BilibiliFucker implements IXposedHookLoadPackage {
                         // 替换其他方法，XP主动调用 方法
                         String rawResponseString = (String) XposedHelpers.callMethod(methodHookParam.args[0], "m");
                         String responseString = rawResponseString;
-                        {
+                        try {
                             Object json = XposedHelpers.callStaticMethod(FastJsonClass, "parseObject", rawResponseString);
                             Object data = XposedHelpers.callMethod(json, "getJSONObject", "data");
                             if (data != null) {
@@ -259,22 +258,25 @@ public class BilibiliFucker implements IXposedHookLoadPackage {
                                     }
                                 }
                             }
+                        } catch (Throwable e) {
+                            responseString = rawResponseString;
                         }
 
-                        log("responseString.length = " + responseString.length());
+//                        log("responseString.length = " + responseString.length());
                         Object beanType = XposedHelpers.getObjectField(methodHookParam.thisObject, "a");
-                        log("beanType = " + beanType);
+//                        log("beanType = " + beanType);
                         int FEATURE_FLAGS = XposedHelpers.getStaticIntField(WatchLaterListConverterClass, "b");
-                        log("FEATURE_FLAGS = " + FEATURE_FLAGS);
+//                        log("FEATURE_FLAGS = " + FEATURE_FLAGS);
                         Object[] features = (Object[]) Array.newInstance(FeatureClass, 1);
                         features[0] = XposedHelpers.getStaticObjectField(FeatureClass, "AutoCloseSource");
-                        log("features = " + Arrays.toString(features));
+//                        log("features = " + Arrays.toString(features));
 
                         Object result = XposedHelpers.callStaticMethod(FastJsonClass, "parseObject", responseString, beanType, FEATURE_FLAGS, features);
 
                         return result;
                     } catch (Throwable e) {
-                        return XposedBridge.invokeOriginalMethod (methodHookParam.method, methodHookParam.thisObject, methodHookParam.args);
+//                        return XposedBridge.invokeOriginalMethod (methodHookParam.method, methodHookParam.thisObject, methodHookParam.args);
+                        throw e;
                     }
                 }
             });
