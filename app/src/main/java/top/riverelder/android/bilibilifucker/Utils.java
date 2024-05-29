@@ -106,7 +106,7 @@ public class Utils {
     }
 
     public static void printStackTrace() {
-        for (StackTraceElement stackTraceElement : new Throwable().getStackTrace()) {
+        for (StackTraceElement stackTraceElement : new Exception("printStackTrace").getStackTrace()) {
             log(stackTraceElement.getClassName() + "#" + stackTraceElement.getMethodName());
         }
     }

@@ -10,6 +10,7 @@ import static top.riverelder.android.bilibilifucker.Utils.setDescendantField;
 import static top.riverelder.android.bilibilifucker.Utils.tryGetDescendantField;
 import static top.riverelder.android.bilibilifucker.Utils.trySetDescendantField;
 
+import android.util.Log;
 import android.view.View;
 
 import org.jetbrains.annotations.Nullable;
@@ -36,9 +37,12 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
 
 public class BilibiliFucker implements IXposedHookLoadPackage {
 
+    public static final String PACKAGE_NAME_PLAY = "com.bilibili.app.in";
+    public static final String PACKAGE_NAME_ORIGIN = "tv.danmaku.bili";
+
     public static final Set<String> VALID_TARGET_PACKAGE_NAMES = new HashSet<>(Arrays.asList(
-            "com.bilibili.app.in",
-            "tv.danmaku.bili"
+            PACKAGE_NAME_PLAY,
+            PACKAGE_NAME_ORIGIN
     ));
 
     public void handleLoadPackage(final LoadPackageParam lpparam) throws Throwable {
@@ -219,18 +223,29 @@ public class BilibiliFucker implements IXposedHookLoadPackage {
         try {
             log("Hook Start: FixWatchLater");
 
+            String watchLaterListConverterClassName = "";
+            String responseReadAsStringMethodName = "";
+
+            if (PACKAGE_NAME_PLAY.equals(packageName)) {
+                watchLaterListConverterClassName = "com.bilibili.okretro.converter.b";
+                responseReadAsStringMethodName = "m";
+            } else if (PACKAGE_NAME_ORIGIN.equals(packageName)) {
+                watchLaterListConverterClassName = "com.bilibili.okretro.e.b";
+                responseReadAsStringMethodName = "string";
+            }
+
             Class<?> FastJsonClass = classLoader.loadClass("com.alibaba.fastjson.JSON");
 
-            Class<?> OkHttpResponseClass = classLoader.loadClass("okhttp3.e0");
             Class<?> FeatureClass = classLoader.loadClass("com.alibaba.fastjson.parser.Feature");
-            Class<?> WatchLaterListConverterClass = classLoader.loadClass("com.bilibili.okretro.converter.b");
+            Class<?> WatchLaterListConverterClass = classLoader.loadClass(watchLaterListConverterClassName);
 
-            XposedHelpers.findAndHookMethod("com.bilibili.okretro.converter.b", classLoader, "convert", java.lang.Object.class, new XC_MethodReplacement() {
+            String finalResponseReadAsStringMethodName = responseReadAsStringMethodName;
+            XposedHelpers.findAndHookMethod(WatchLaterListConverterClass, "convert", java.lang.Object.class, new XC_MethodReplacement() {
                 @Override
                 protected Object replaceHookedMethod(MethodHookParam methodHookParam) throws Throwable {
                     try {
                         // 替换其他方法，XP主动调用 方法
-                        String rawResponseString = (String) XposedHelpers.callMethod(methodHookParam.args[0], "m");
+                        String rawResponseString = (String) XposedHelpers.callMethod(methodHookParam.args[0], finalResponseReadAsStringMethodName);
                         String responseString = rawResponseString;
                         try {
                             Object json = XposedHelpers.callStaticMethod(FastJsonClass, "parseObject", rawResponseString);
