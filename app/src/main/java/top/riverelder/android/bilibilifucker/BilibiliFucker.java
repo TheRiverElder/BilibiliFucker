@@ -301,6 +301,7 @@ public class BilibiliFucker implements IXposedHookLoadPackage {
         try {
             log("Hook Start: PlayVipOfflineVideo");
 
+            // 不提示弹窗
             XposedHelpers.findAndHookMethod("tv.danmaku.bili.ui.offline.g1", classLoader, "s", "kn1.c", new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
@@ -308,6 +309,7 @@ public class BilibiliFucker implements IXposedHookLoadPackage {
                 }
             });
 
+            // 让视频可以被点击打开
             XposedHelpers.findAndHookMethod("kn1.c", classLoader, "c", new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
@@ -315,6 +317,7 @@ public class BilibiliFucker implements IXposedHookLoadPackage {
                 }
             });
 
+            // 不显示VIP限制的红字
             XposedHelpers.findAndHookMethod("kn1.c", classLoader, "d", new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
@@ -322,6 +325,7 @@ public class BilibiliFucker implements IXposedHookLoadPackage {
                 }
             });
 
+            // 让视频不被从实际播放列表中剔除
             XposedHelpers.findAndHookMethod("kn1.c", classLoader, "f", new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
