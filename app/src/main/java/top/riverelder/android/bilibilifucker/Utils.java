@@ -1,25 +1,37 @@
 package top.riverelder.android.bilibilifucker;
 
+import static de.robv.android.xposed.XposedHelpers.findAndHookConstructor;
+import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
+
+import android.view.View;
+
 import androidx.annotation.NonNull;
 
 import org.jetbrains.annotations.Nullable;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
+import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
 public class Utils {
 
     //#region Debug tools
 
-    public static final String LOG_HEADER = "BilibiliFucker: ";
+    public static final String LOG_HEADER = "[BilibiliFucker] ";
 
 
     public static void log(String message) {
@@ -49,14 +61,14 @@ public class Utils {
             for (int i = 0; i < length; i++) {
                 printBeanLine(indent, "[" + i + "]", Array.get(object, i), indentLevel, visited, maxLevel);
             }
-        } if (object instanceof Collection) {
+        } else if (object instanceof Collection) {
             Collection<?> collection = (Collection<?>) object;
             int i = 0;
             for (Object value : collection) {
                 printBeanLine(indent, "[" + i + "]", value, indentLevel, visited, maxLevel);
                 i++;
             }
-        } if (object instanceof Map) {
+        } else if (object instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) object;
             Set<? extends Map.Entry<?, ?>> entries = map.entrySet();
             for (Map.Entry<?, ?> entry : entries) {
@@ -64,11 +76,17 @@ public class Utils {
             }
         } else {
             for (Field field : clazz.getDeclaredFields()) {
-                if (Modifier.isStatic(field.getModifiers())) continue;
+                List<String> nameParts = new ArrayList<>();
+                if (Modifier.isStatic(field.getModifiers())) {
+                    nameParts.add("static");
+                }
+                nameParts.add(field.getName());
+                String name = String.join(" ", nameParts);
 
                 field.setAccessible(true);
                 try {
-                    printBeanLine(indent, field.getName(), field.get(object), indentLevel, visited, maxLevel);
+                    Object value = field.get(object);
+                    printBeanLine(indent, name, value, indentLevel, visited, maxLevel);
                 } catch (IllegalAccessException e) {
                     e.printStackTrace();
                 }
@@ -78,13 +96,14 @@ public class Utils {
 
     public static void printBeanLine(String indent, String name, @Nullable Object value, int indentLevel, Set<Object> visited, int maxLevel) {
         String valueString = (value instanceof String && ((String) value).matches("^\\s*$")) ? "\"\"" : String.valueOf(value);
+        String typeString = (value == null) ? "null" : value.getClass().getName();
         if (value == null || isLiteral(value.getClass())) {
-            log(indent + name + ": " + valueString);
+            log(indent + name + ": " + typeString + " = " + valueString);
         } else {
             if (visited.contains(value)) {
-                log(indent + name + ": " + valueString + " (loop reference)");
+                log(indent + name + ": " + typeString + " = " + valueString + " (loop reference)");
             } else {
-                log(indent + name + ": " + valueString);
+                log(indent + name + ": " + typeString + " = " + valueString);
                 printBean(value, indentLevel + 1, visited, maxLevel);
             }
         }
@@ -183,5 +202,72 @@ public class Utils {
     }
 
     //#endregion
+
+
+
+    public static void hookViewClickEvent() {
+        try {
+            findAndHookMethod(
+                    View.class,
+                    "setOnClickListener",
+                    View.OnClickListener.class,
+                    new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                            View.OnClickListener l = (View.OnClickListener) param.args[0];
+                            param.args[0] = new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                    log("!!! on click view: " + v);
+                                    log("!-- listener: " + l);
+//                                    printStackTrace();
+                                    l.onClick(v);
+                                }
+                            };
+                        }
+                    });
+            log("Hook succeeded: ViewDebug");
+        } catch (Exception e) {
+            log("Hook failed: ViewDebug");
+            log("message: " + e.getMessage());
+        }
+    }
+
+    public static void hookViewScrollFreshEvent(final XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            findAndHookConstructor(
+//            findAndHookMethod(
+                    "androidx.recyclerview.widget.RecyclerView.Adapter",
+                    lpparam.classLoader,
+                    new XC_MethodHook() {
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                            log("!!! RecyclerView.Adapter " + param.thisObject);
+                            printBean(param.thisObject);
+//                            printStackTrace();
+                        }
+                    });
+            log("Hook succeeded: ViewDebug");
+        } catch (Exception e) {
+            log("Hook failed: ViewDebug");
+            log("message: " + e.getMessage());
+        }
+
+    }
+
+    public static ByteArrayOutputStream cloneInputStream(InputStream input) {
+        try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            byte[] buffer = new byte[1024];
+            int len;
+            while ((len = input.read(buffer)) > -1) {
+                baos.write(buffer, 0, len);
+            }
+            baos.flush();
+            return baos;
+        } catch (IOException e) {
+            return null;
+        }
+    }
 
 }
