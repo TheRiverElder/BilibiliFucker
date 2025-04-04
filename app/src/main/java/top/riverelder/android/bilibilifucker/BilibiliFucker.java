@@ -8,10 +8,12 @@ import android.content.Context;
 import android.widget.LinearLayout;
 
 import java.lang.reflect.Array;
+import java.lang.reflect.Method;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -258,6 +260,9 @@ public class BilibiliFucker implements IXposedHookLoadPackage {
                                         if (page != null) {
                                             long cid = (Long) XposedHelpers.callMethod(page, "getLong", "cid");
                                             if (cid > Integer.MAX_VALUE) {
+                                                // 出现这个bug的原因是cid是long，而该版本用来计算封面（或者别的信息）的容器事用int
+                                                // 因此用一个短一点的int类型数据糊弄一下就行
+                                                // 实际播放用的容器是String，不用担心播放不了实际的视频
                                                 int newCid = (int) (cid & Integer.MAX_VALUE);
                                                 XposedHelpers.callMethod(page, "put", "cid", newCid);
                                                 changed = true;
@@ -290,6 +295,205 @@ public class BilibiliFucker implements IXposedHookLoadPackage {
                     }
                 }
             });
+
+//            XposedHelpers.findAndHookMethod("tv.danmaku.bili.videopage.common.helper.VideoRouter", classLoader, "i", android.content.Context.class, android.net.Uri.class, new XC_MethodHook() {
+//                @Override
+//                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+//                    log("VideoRouter.i");
+//                    Object uri = param.args[1];
+//                    if (uri != null) {
+//                        log("uri = " + uri.toString());
+//                    }
+//                }
+//            });
+
+            // 由此找到问题在这个方法附近：com.bilibili.multitypeplayerV2.PlayListHelper$k#e6
+//            XposedHelpers.findAndHookMethod(android.widget.TextView.class, "setText", CharSequence.class, new XC_MethodHook() {
+//                @Override
+//                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+//                    if (param.args[0] instanceof CharSequence) {
+//                        CharSequence text = (CharSequence) param.args[0];
+//                        if (text.toString().equals("顺序")) {
+//                            log("FixWatchLater: " + text);
+//
+//                            printStackTrace();
+//                        }
+//                    }
+//                }
+//            });
+
+//            XposedHelpers.findAndHookMethod("com.bilibili.multitypeplayer.ui.playpage.playlist.PlaylistPresenter$b", classLoader, "x", "com.bilibili.multitypeplayer.ui.playpage.playlist.PlaylistPresenter$b", "com.bilibili.playlist.api.MultitypePlaylist$Info", new XC_MethodHook() {
+//                @Override
+//                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+//                    Object info = param.args[1];
+//                    log("MultitypePlaylist$Info: " + info);
+//                    printBean(info);
+//                }
+//            });
+
+//            XposedHelpers.findAndHookMethod("com.bilibili.multitypeplayer.ui.playpage.playlist.PlaylistPresenter$b", classLoader, "x", "com.bilibili.multitypeplayer.ui.playpage.playlist.PlaylistPresenter$b", "com.bilibili.playlist.api.MultitypePlaylist$Info", new XC_MethodHook() {
+//
+//                @Override
+//                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+//                    log("MultitypePlaylist$Info: " + param.args[1]);
+//                    printStackTrace();
+//                }
+//            });
+
+//            XposedHelpers.findAndHookMethod("com.bilibili.multitypeplayerV2.PlayListHelper$k", classLoader, "s7", java.util.List.class, int.class, new XC_MethodHook() {
+//                @Override
+//                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+//                    List list = (List) param.args[0];
+//                    log("MultitypePlaylist$Info: " + list.size() + ", " + param.args[1]);
+//                    printBean(list);
+//                }
+//            });
+
+            // 这里只是第一次填充列表，且数据只有20条（总共36条），但是客户都安实际显示21条，故应该还有一个追加数据的方法还没被找到
+//            XposedHelpers.findAndHookMethod("com.bilibili.multitypeplayer.ui.playpage.playlist.PlaylistPresenter$b$e", classLoader, "e", "com.bilibili.playlist.api.PlayListInfos", new XC_MethodHook() {
+//                @Override
+//                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+//                    Object infos = param.args[0];
+//                    int totalCount = XposedHelpers.getIntField(infos, "totalCount");
+//                    log("PlaylistPresenter$b$e: " + infos);
+//                    log("totalCount: " + totalCount);
+//                    printBean(infos);
+//                }
+//            });
+
+//            XposedHelpers.findAndHookMethod("com.bilibili.multitypeplayerV2.PlayListHelper$k", classLoader, "Q6", java.util.List.class, new XC_MethodHook() {
+//                @Override
+//                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+//                    List list = (List) param.args[0];
+//                    log("List: size = " + list.size());
+////                    printBean(list);
+//                    printStackTrace();
+//                }
+//            });
+
+//            XposedHelpers.findAndHookMethod("com.bilibili.multitypeplayer.ui.playpage.playlist.PlaylistPresenter$b", classLoader, "q", "com.bilibili.multitypeplayer.ui.playpage.playlist.PlaylistPresenter$b$a", new XC_MethodHook() {
+//                @Override
+//                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+//                    log("beforeHookedMethod: q");
+//                    printStackTrace();
+//                    log("--------");
+//                    log("param.args[0]: " + param.args[0]);
+//                    printBean(param.args[0]);
+//                }
+//            });
+
+//            XposedHelpers.findAndHookConstructor("il1.b", classLoader, new XC_MethodHook() {
+//                @Override
+//                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+//                    log("afterHookedMethod: il1.b");
+//                    Object service = XposedHelpers.getObjectField(param.thisObject, "a");
+//                    log("Service = " + service);
+//                    printBean(service, 3);
+//                }
+//            });
+
+//            XposedHelpers.findAndHookMethod("retrofit2.o", classLoader, "g", java.lang.reflect.Method.class, java.lang.Class.class, java.lang.Object.class, java.lang.Object[].class, new XC_MethodHook() {
+//                @Override
+//                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+//                    Method method = (Method) param.args[0];
+//                    if (!method.getName().contains("getMediaList")) return;
+//
+//                    log("beforeHookedMethod: retrofit2.o.g " + method.getName());
+//
+//                    Object[] args = (Object[]) param.args[3];
+//                    log("Args = " + args.length + " " + Arrays.toString(args));
+//                }
+//            });
+
+//            XposedHelpers.findAndHookMethod("retrofit2.Retrofit", classLoader, "d", java.lang.Class.class, java.lang.reflect.Method.class, new XC_MethodHook() {
+//                @Override
+//                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+//                    Class interf = (Class) param.args[0];
+//                    Method method = (Method) param.args[1];
+//                    Object result = param.getResult();
+//
+//                    if (!method.getName().contains("getMediaList")) return;
+//
+//                    log("afterHookedMethod: retrofit2.Retrofit.d ");
+//                    log("interf = " + interf.getName());
+//                    log("method = " + method.getName());
+//                    log("result = " + result);
+//                }
+//            });
+
+//            XposedHelpers.findAndHookMethod("retrofit2.j", classLoader, "a", java.lang.Object[].class, new XC_MethodHook() {
+//                @Override
+//                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+//                    Object[] args = (Object[]) param.args[0];
+////                    args[3] = (long) args[3];
+//                }
+//            });
+
+            XposedHelpers.findAndHookMethod("retrofit2.Retrofit$a", classLoader, "invoke", java.lang.Object.class, java.lang.reflect.Method.class, java.lang.Object[].class, new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+//                    Object self = param.args[0];
+                    Method method = (Method) param.args[1];
+                    Object[] args = (Object[]) param.args[2];
+
+                    if (!method.getName().contains("getMediaList")) return;
+//                    log("beforeHookedMethod: retrofit2.Retrofit$a");
+
+//                    Object interfaceToImplement = XposedHelpers.getObjectField(param.thisObject, "c");
+//                    log("interfaceToImplement = " + interfaceToImplement);
+//                    Object content = XposedHelpers.getObjectField(param.thisObject, "a");
+//                    log("content = " + content);
+//
+//                    log("Self = " + self);
+//                    log("Method = " + method);
+//                    log("Args = " + args.length + " " + Arrays.toString(args));
+//
+//                    int i = 0;
+//                    log("type int = " + args[i++]);
+//                    log("biz_id: String = " + args[i++]);
+//                    log("oid: int = " + args[i++]);
+//                    log("offset: long = " + args[i++]);
+//                    log("desc: boolean = " + args[i++]);
+//                    log("direction: boolean = " + args[i++]);
+//                    log("with_current: boolean = " + args[i++]);
+//                    log("from: String = " + args[i++]);
+//                    log("sort_field: int = " + args[i++]);
+//                    log("otype: Integer = " + args[i++]);
+//                    log("use_pn: boolean = " + args[i++]);
+//                    log("pn: int = " + args[i++]);
+//
+//                    log("--------");
+//                    printStackTrace();
+
+                    // 错误原因是原本为：第一次获取前20条数据时候，并不是调用getMediaList，而在之后上拉刷新时调用的是getMediaList，
+                    // 而调用getMediaList时候long的oid被截断为int，导致服务器无法返回正确的数据
+                    Long actualOid = BilibiliFucker.this.remapping.get(args[2]);
+                    if (actualOid != null) {
+                        args[2] = actualOid;
+                    }
+                }
+            });
+
+            XposedHelpers.findAndHookMethod("il1.b", classLoader, "b", "ll1.h", "ll1.i", boolean.class, boolean.class, new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    Object actualOidContainer = param.args[1];
+                    long actualOid = (long) XposedHelpers.callMethod(actualOidContainer, "d");
+//                    log("actualOid: " + actualOid);
+                    // 此处缓存正确的oid，因为后续的getMediaList会截断oid为int
+                    BilibiliFucker.this.remapping.put((int) actualOid, actualOid);
+                }
+            });
+
+            // implements com.bilibili.multitypeplayer.domain.playpage.MultitypePlayService
+//            XposedHelpers.findAndHookMethod("retrofit2.Retrofit$a", classLoader, "getMediaList", int.class, java.lang.String.class, int.class, long.class, boolean.class, boolean.class, boolean.class, java.lang.String.class, int.class, java.lang.Integer.class, boolean.class, int.class, new XC_MethodHook() {
+//                @Override
+//                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+//                    log("beforeHookedMethod: getMediaList");
+//                    printStackTrace();
+//                    log("--------");
+//                }
+//            });
 
             log("Hook succeeded: FixWatchLater");
         } catch (Exception e) {
@@ -728,5 +932,7 @@ public class BilibiliFucker implements IXposedHookLoadPackage {
 
         log("Hook finished: " + packageName);
     }
+
+    private Map<Integer, Long> remapping = new HashMap<>();
 
 }
